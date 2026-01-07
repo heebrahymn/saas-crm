@@ -3,28 +3,37 @@
 namespace App\Http\Middleware;
 
 use App\Models\Company;
+use App\Services\Caching\AdvancedCacheService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 class TenantMiddleware
 {
+    public function __construct(private AdvancedCacheService $cacheService) {}
+
     public function handle(Request $request, Closure $next): Response
     {
-        // Path-based tenancy: get subdomain from route parameter
-        $subdomain = $request->route('tenant_subdomain');
-
+        // Extract subdomain from host
+        $host = $request->getHost();
+        $subdomain = $this->extractSubdomain($host);
+        
         if (!$subdomain) {
-            // No tenant param, move along (shouldn't happen if properly grouped)
+            // No subdomain means main domain (public pages like login, register)
+            $request->attributes->set('tenant', null);
             return $next($request);
         }
 
         // Get tenant from cache or database
-        $tenant = Cache::remember("tenant:{$subdomain}", 300, function () use ($subdomain) {
-            return Company::where('subdomain', $subdomain)->first();
-        });
+        $tenant = $this->cacheService->getCachedTenant($subdomain);
+        
+        if (!$tenant) {
+            $tenant = Company::where('subdomain', $subdomain)->first();
+            if ($tenant) {
+                $this->cacheService->cacheTenantResolution($subdomain, $tenant);
+            }
+        }
 
         if (!$tenant) {
             abort(404, 'Tenant not found');
@@ -34,16 +43,20 @@ class TenantMiddleware
         $request->attributes->set('tenant', $tenant);
         $request->attributes->set('company_id', $tenant->id);
 
-
-        // Set default route parameter for URL generation
-        URL::defaults(['tenant_subdomain' => $subdomain]);
-
         // Set the tenant context globally
         app()->instance('current_tenant', $tenant);
 
-        // Forget the parameter so it doesn't mess with controller signatures if not requested
-        $request->route()->forgetParameter('tenant_subdomain');
-
         return $next($request);
+    }
+
+    private function extractSubdomain(string $host): ?string
+    {
+        $suffix = config('app.tenant_subdomain_suffix', '.app.test');
+        
+        if (str_ends_with($host, $suffix)) {
+            return substr($host, 0, -(strlen($suffix)));
+        }
+
+        return null;
     }
 }

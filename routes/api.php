@@ -13,6 +13,9 @@ use App\Http\Controllers\CRM\ContactController;
 use App\Http\Controllers\CRM\LeadController;
 use App\Http\Controllers\CRM\DealController;
 use App\Http\Controllers\CRM\TaskController;
+use App\Http\Controllers\CRM\DashboardController;
+use App\Http\Controllers\Compliance\GDPRController;
+use App\Http\Controllers\DataRetention\DataRetentionController;
 
 // Public routes (no tenant context)
 Route::post('/register', [OnboardingController::class, 'register']);
@@ -23,6 +26,20 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    
+    // GDPR compliance routes
+    Route::prefix('/compliance')->group(function () {
+        Route::get('/export', [GDPRController::class, 'exportData']);
+        Route::delete('/delete-account', [GDPRController::class, 'deleteAccount']);
+        Route::post('/consent', [GDPRController::class, 'consent']);
+        Route::get('/consent', [GDPRController::class, 'checkConsent']);
+    });
+    
+    // Data retention routes
+    Route::prefix('/data-retention')->group(function () {
+        Route::get('/policy', [DataRetentionController::class, 'policyInfo']);
+        Route::post('/cleanup', [DataRetentionController::class, 'cleanup']);
+    });
 });
 
 // Team invitation routes (no tenant context but token required)
@@ -52,7 +69,7 @@ Route::middleware(['tenant'])->group(function () {
             Route::apiResource('users', UserManagementController::class)->except(['store', 'create']);
             Route::put('/users/{user}/role', [UserManagementController::class, 'updateRole']);
             Route::put('/users/{user}/deactivate', [UserManagementController::class, 'deactivate']);
-            Route::put('/users/{user}/activate', [UserManagementController::class, 'activate');
+            Route::put('/users/{user}/activate', [UserManagementController::class, 'activate']);
         });
     });
 
@@ -86,10 +103,8 @@ Route::middleware(['tenant'])->group(function () {
         Route::post('/tasks/{task}/complete', [TaskController::class, 'markComplete']);
         Route::post('/tasks/{task}/incomplete', [TaskController::class, 'markIncomplete']);
 
-        
-        /// Replace the simple dashboard route with a controller
-Route::get('/dashboard', [DashboardController::class, 'index']);
-
+        // Dashboard route
+        Route::get('/dashboard', [DashboardController::class, 'index']);
     });
 });
 

@@ -2,13 +2,15 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Caching\AdvancedCacheService;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class SubscriptionMiddleware
 {
+    public function __construct(private AdvancedCacheService $cacheService) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $tenant = $request->attributes->get('tenant');
@@ -19,13 +21,12 @@ class SubscriptionMiddleware
         }
 
         // Check subscription status with caching
-        $isSubscribed = Cache::remember(
-            "tenant:{$tenant->id}:subscribed", 
-            60, // Cache for 1 minute
-            function () use ($tenant) {
-                return $tenant->isSubscribed() || $tenant->isOnTrial();
-            }
-        );
+        $isSubscribed = $this->cacheService->getCachedSubscriptionStatus($tenant->id);
+        
+        if (is_null($isSubscribed)) {
+            $isSubscribed = $tenant->isSubscribed() || $tenant->isOnTrial();
+            $this->cacheService->cacheSubscriptionStatus($tenant->id, $isSubscribed);
+        }
 
         if (!$isSubscribed) {
             // Hard enforcement - block all tenant features

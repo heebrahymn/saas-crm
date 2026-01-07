@@ -12,10 +12,10 @@ return [
     'data_retention' => [
         'enabled' => true,
         'policies' => [
-            'contacts' => 365, // days
-            'leads' => 365,
-            'deals' => 365,
-            'tasks' => 180,
+            'contacts' => env('DATA_RETENTION_CONTACTS_DAYS', 365), // days
+            'leads' => env('DATA_RETENTION_LEADS_DAYS', 365),
+            'deals' => env('DATA_RETENTION_DEALS_DAYS', 365),
+            'tasks' => env('DATA_RETENTION_TASKS_DAYS', 180),
         ],
     ],
     
@@ -24,5 +24,10 @@ return [
         'data_export_enabled' => true,
         'data_deletion_enabled' => true,
         'consent_tracking' => true,
+        'consent_purposes' => [
+            'marketing',
+            'analytics',
+            'essential',
+        ],
     ],
 ];
