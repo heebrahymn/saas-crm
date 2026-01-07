@@ -7,6 +7,8 @@ use App\Http\Controllers\Team\InvitationController;
 use App\Http\Controllers\User\UserManagementController;
 use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\Tenant\CompanyController;
+use App\Http\Controllers\Billing\BillingController;
+use App\Http\Controllers\Billing\StripeWebhookController;
 
 // Public routes (no tenant context)
 Route::post('/register', [OnboardingController::class, 'register']);
@@ -46,7 +48,20 @@ Route::middleware(['tenant'])->group(function () {
             Route::apiResource('users', UserManagementController::class)->except(['store', 'create']);
             Route::put('/users/{user}/role', [UserManagementController::class, 'updateRole']);
             Route::put('/users/{user}/deactivate', [UserManagementController::class, 'deactivate']);
-            Route::put('/users/{user}/activate', [UserManagementController::class, 'activate']);
+            Route::put('/users/{user}/activate', [UserManagementController::class, 'activate');
+        });
+    });
+
+    // Billing routes (no subscription required for these)
+    Route::prefix('/billing')->group(function () {
+        Route::middleware(['auth:sanctum'])->group(function () {
+            Route::get('/plans', [BillingController::class, 'plans']);
+            Route::post('/subscribe', [BillingController::class, 'subscribe']);
+            Route::post('/unsubscribe', [BillingController::class, 'unsubscribe']);
+            Route::post('/change-plan', [BillingController::class, 'changePlan']);
+            Route::get('/subscription', [BillingController::class, 'currentSubscription']);
+            Route::get('/invoices', [BillingController::class, 'invoices']);
+            Route::post('/sync-status', [BillingController::class, 'syncStatus']);
         });
     });
 
@@ -57,9 +72,7 @@ Route::middleware(['tenant'])->group(function () {
             return response()->json(['message' => 'Tenant dashboard']);
         });
     });
-    
-    // Routes that don't require subscription (like subscription management)
-    Route::prefix('/billing')->group(function () {
-        // Billing routes
-    });
 });
+
+// Stripe webhook (public endpoint)
+Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handleWebhook']);
