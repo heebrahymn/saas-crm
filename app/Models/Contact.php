@@ -30,4 +30,29 @@ class Contact extends TenantModel
     protected $hidden = [
         'company_id',
     ];
+
+    public function getFullNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
+    }
+
+    public function leads()
+    {
+        return $this->hasMany(Lead::class);
+    }
+
+    public function deals()
+    {
+        return $this->hasMany(Deal::class);
+    }
+
+    public function tasks()
+    {
+        return $this->morphMany(Task::class, 'related_to');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
 }

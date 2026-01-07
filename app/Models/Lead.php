@@ -34,4 +34,29 @@ class Lead extends TenantModel
     protected $hidden = [
         'company_id',
     ];
+
+    public function contact()
+    {
+        return $this->belongsTo(Contact::class);
+    }
+
+    public function assignedUser()
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function isWon(): bool
+    {
+        return $this->status === 'closed_won';
+    }
+
+    public function isLost(): bool
+    {
+        return $this->status === 'closed_lost';
+    }
+
+    public function isConverted(): bool
+    {
+        return $this->status === 'converted';
+    }
 }

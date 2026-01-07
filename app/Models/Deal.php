@@ -35,4 +35,39 @@ class Deal extends TenantModel
     protected $hidden = [
         'company_id',
     ];
+
+    public function contact()
+    {
+        return $this->belongsTo(Contact::class);
+    }
+
+    public function lead()
+    {
+        return $this->belongsTo(Lead::class);
+    }
+
+    public function assignedUser()
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function isWon(): bool
+    {
+        return $this->status === 'closed_won';
+    }
+
+    public function isLost(): bool
+    {
+        return $this->status === 'closed_lost';
+    }
+
+    public function isClosed(): bool
+    {
+        return in_array($this->status, ['closed_won', 'closed_lost']);
+    }
+
+    public function getExpectedValue(): float
+    {
+        return $this->value * ($this->probability / 100);
+    }
 }

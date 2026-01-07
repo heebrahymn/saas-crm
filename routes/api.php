@@ -9,6 +9,10 @@ use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\Tenant\CompanyController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
+use App\Http\Controllers\CRM\ContactController;
+use App\Http\Controllers\CRM\LeadController;
+use App\Http\Controllers\CRM\DealController;
+use App\Http\Controllers\CRM\TaskController;
 
 // Public routes (no tenant context)
 Route::post('/register', [OnboardingController::class, 'register']);
@@ -65,12 +69,27 @@ Route::middleware(['tenant'])->group(function () {
         });
     });
 
-    // Subscription protected routes
+    // CRM routes (subscription required)
     Route::middleware(['auth:sanctum', 'subscribed'])->group(function () {
-        // CRM routes will go here
-        Route::get('/dashboard', function () {
-            return response()->json(['message' => 'Tenant dashboard']);
-        });
+        Route::apiResource('contacts', ContactController::class);
+        Route::apiResource('leads', LeadController::class);
+        Route::apiResource('deals', DealController::class);
+        Route::apiResource('tasks', TaskController::class);
+
+        // Lead-specific routes
+        Route::post('/leads/{lead}/convert', [LeadController::class, 'convertToDeal']);
+
+        // Deal-specific routes
+        Route::post('/deals/{deal}/close', [DealController::class, 'close']);
+
+        // Task-specific routes
+        Route::post('/tasks/{task}/complete', [TaskController::class, 'markComplete']);
+        Route::post('/tasks/{task}/incomplete', [TaskController::class, 'markIncomplete']);
+
+        
+        /// Replace the simple dashboard route with a controller
+Route::get('/dashboard', [DashboardController::class, 'index']);
+
     });
 });
 
