@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
@@ -54,6 +54,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(UserRole::class)->where('company_id', $this->company_id);
     }
 
+    public function getUserRoleAttribute()
+    {
+        return $this->userRole?->role ?? 'staff';
+    }
+
     public function getRoleAttribute()
     {
         return $this->userRole?->role ?? 'staff';
@@ -76,14 +81,29 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasPermissionTo($permission): bool
     {
-        // For now, we'll implement role-based permissions
-        // Admin can do everything
-        if ($this->hasRole('admin')) {
-            return true;
-        }
+        // Role-based permissions
+        return match($this->role) {
+            'admin' => true,
+            'manager' => in_array($permission, [
+                'view_users', 'create_leads', 'update_leads', 
+                'create_deals', 'update_deals', 'manage_tasks'
+            ]),
+            'staff' => in_array($permission, [
+                'view_own_leads', 'update_own_leads',
+                'view_own_tasks', 'update_own_tasks'
+            ]),
+            default => false,
+        };
+    }
 
-        // Managers and staff have limited permissions
-        // This will be expanded later
-        return false;
+    public function canAccessPanel($panel): bool
+    {
+        // Define panel access based on role
+        return match($panel) {
+            'admin' => $this->hasRole('admin'),
+            'manager' => $this->hasRole('admin') || $this->hasRole('manager'),
+            'staff' => $this->hasRole('admin') || $this->hasRole('manager') || $this->hasRole('staff'),
+            default => false,
+        };
     }
 }
