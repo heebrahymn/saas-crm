@@ -1,33 +1,81 @@
-import '../css/app.css';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './Contexts/AuthContext';
+import { TenantProvider } from './Contexts/TenantContext';
+import Login from './Components/Auth/Login';
+import Register from './Components/Auth/Register';
+import Dashboard from './Components/Dashboard/Dashboard';
+import Layout from './Components/Layout/Layout';
+import ProtectedRoute from './Components/Auth/ProtectedRoute';
+import TenantRoute from './Components/Auth/TenantRoute';
+import Contacts from './Components/CRM/Contacts';
+import Leads from './Components/CRM/Leads';
+import Deals from './Components/CRM/Deals';
+import Tasks from './Components/CRM/Tasks';
+import Profile from './Components/User/Profile';
+import Billing from './Components/Billing/Billing';
+import Team from './Components/User/Team';
+import InvitationAccept from './Components/Auth/InvitationAccept';
 
-import { createInertiaApp } from '@inertiajs/react';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { initializeTheme } from './hooks/use-appearance';
+function AppContent() {
+    const { loading } = useAuth();
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
-
-createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) =>
-        resolvePageComponent(
-            `./pages/${name}.tsx`,
-            import.meta.glob('./pages/**/*.tsx'),
-        ),
-    setup({ el, App, props }) {
-        const root = createRoot(el);
-
-        root.render(
-            <StrictMode>
-                <App {...props} />
-            </StrictMode>,
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
         );
-    },
-    progress: {
-        color: '#4B5563',
-    },
-});
+    }
 
-// This will set light / dark mode on load...
-initializeTheme();
+    return (
+        <Router>
+            <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/accept-invitation/:token" element={<InvitationAccept />} />
+                
+                {/* Tenant routes (require subdomain) */}
+                <Route 
+                    path="/*" 
+                    element={
+                        <TenantRoute>
+                            <ProtectedRoute>
+                                <Layout>
+                                    <Routes>
+                                        <Route path="/" element={<Dashboard />} />
+                                        <Route path="/dashboard" element={<Dashboard />} />
+                                        <Route path="/contacts" element={<Contacts />} />
+                                        <Route path="/leads" element={<Leads />} />
+                                        <Route path="/deals" element={<Deals />} />
+                                        <Route path="/tasks" element={<Tasks />} />
+                                        <Route path="/profile" element={<Profile />} />
+                                        <Route path="/billing" element={<Billing />} />
+                                        <Route path="/team" element={<Team />} />
+                                    </Routes>
+                                </Layout>
+                            </ProtectedRoute>
+                        </TenantRoute>
+                    } 
+                />
+                
+                {/* Redirect unknown routes */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </Router>
+    );
+}
+
+function App() {
+    return (
+        <AuthProvider>
+            <TenantProvider>
+                <AppContent />
+            </TenantProvider>
+        </AuthProvider>
+    );
+    
+}
+
+export default App;
