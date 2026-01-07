@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'saas-crm'),
 
     /*
     |--------------------------------------------------------------------------
@@ -53,6 +53,8 @@ return [
     */
 
     'url' => env('APP_URL', 'http://localhost'),
+
+    'tenant_subdomain_suffix' => env('TENANT_SUBDOMAIN_SUFFIX', '.saas-crm.test'),
 
     /*
     |--------------------------------------------------------------------------
